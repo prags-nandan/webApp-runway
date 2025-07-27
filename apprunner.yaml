@@ -5,11 +5,13 @@ build:
     build:
       - pip install -r requirements.txt
 run:
-  runtime-version: latest
-  command: gunicorn app:app
+  runtime-version: 3.11
+  command: gunicorn app:app --bind 0.0.0.0:8000
   network:
     port: 8000
     env: PORT
   env:
     - name: FLASK_APP
       value: "app.py"
+    - name: FLASK_ENV
+      value: "production"
