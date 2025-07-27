@@ -15,6 +15,8 @@ load_dotenv()
 #Ensuring the uploads directory exists, need to create Vars in AppRunner
 app = Flask(__name__)
 CORS(app)
+ 
+ #why its not working in AppRunner
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
