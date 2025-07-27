@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TVNZ+ AI Image to Video Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #ff0066, #ff9900);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(45deg, #ff0066, #ff9900);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .container {
+            flex: 1;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            width: 100%;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #ff0066;
+            background: rgba(255, 0, 102, 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: #ff9900;
+            background: rgba(255, 153, 0, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .upload-subtext {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .preview-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #ff0066;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .prompt-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .button {
+            background: linear-gradient(45deg, #ff0066, #ff9900);
+            color: #ffffff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 0, 102, 0.3);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-right: 10px;
+        }
+
+        .button-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .spinner-icon {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #ff0066;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .status-subtext {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            color: #00ff88;
+            margin-bottom: 20px;
+        }
+
+        .video-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            color: #000000;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .video-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6666;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">TV</div>
+            <h1>TVNZ+ AI Image to Video Generator</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">🎬</span>
+                <p class="upload-text">Drop your image here or click to browse</p>
+                <p class="upload-subtext">Supports PNG, JPG, JPEG, GIF, WEBP (Max 16MB)</p>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+
+            <div class="preview-section" id="previewSection">
+                <img id="previewImage" class="preview-image" alt="Preview">
+                <textarea 
+                    id="promptInput" 
+                    class="prompt-input" 
+                    placeholder="Describe what you want to see in the video (e.g., 'Add movement to the clouds, make the water flow')"
+                    rows="3"
+                ></textarea>
+                <button class="button button-secondary" onclick="resetUpload()">
+                    ↺ Choose Different Image
+                </button>
+                <button class="button" id="generateButton" onclick="generateVideo()">
+                    ✨ Generate Video
+                </button>
+            </div>
+        </div>
+
+        <div class="spinner" id="spinner">
+            <div class="spinner-icon"></div>
+            <p class="status-text">Creating your video...</p>
+            <p class="status-subtext">This usually takes 30-60 seconds</p>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <span class="success-icon">✓</span>
+            <h2>Your video is ready!</h2>
+            <a href="#" target="_blank" class="video-link" id="videoLink">
+                🎥 Watch Your Video
+            </a>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let currentTaskId = null;
+        let pollInterval = null;
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const spinner = document.getElementById('spinner');
+        const resultSection = document.getElementById('resultSection');
+        const errorMessage = document.getElementById('errorMessage');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+
+            if (file.size > 16 * 1024 * 1024) {
+                showError('File size must be less than 16MB');
+                return;
+            }
+
+            selectedFile = file;
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                uploadArea.style.display = 'none';
+                previewSection.style.display = 'block';
+                hideError();
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        function resetUpload() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewImage.src = '';
+            uploadArea.style.display = 'block';
+            previewSection.style.display = 'none';
+            resultSection.style.display = 'none';
+            spinner.style.display = 'none';
+            hideError();
+            
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        async function generateVideo() {
+            if (!selectedFile) {
+                showError('Please select an image first');
+                return;
+            }
+
+            const promptText = document.getElementById('promptInput').value.trim();
+            if (!promptText) {
+                showError('Please enter a description for your video');
+                return;
+            }
+
+            const generateButton = document.getElementById('generateButton');
+            generateButton.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+            formData.append('promptText', promptText);
+
+            spinner.style.display = 'block';
+            resultSection.style.display = 'none';
+            hideError();
+
+            try {
+                const response = await fetch('/api/upload-and-generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.id) {
+                    currentTaskId = data.id;
+                    startPolling();
+                } else {
+                    throw new Error(data.error || 'Failed to start video generation');
+                }
+            } catch (error) {
+                showError(error.message);
+                spinner.style.display = 'none';
+                generateButton.disabled = false;
+            }
+        }
+
+        function startPolling() {
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/check-status/${currentTaskId}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        if (data.status === 'SUCCEEDED' && data.output && data.output.length > 0) {
+                            clearInterval(pollInterval);
+                            showResult(data.output[0]);
+                        } else if (data.status === 'FAILED') {
+                            clearInterval(pollInterval);
+                            showError('Video generation failed. Please try again.');
+                            spinner.style.display = 'none';
+                            document.getElementById('generateButton').disabled = false;
+                        }
+                    } else {
+                        throw new Error(data.error || 'Failed to check status');
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    showError(error.message);
+                    spinner.style.display = 'none';
+                    document.getElementById('generateButton').disabled = false;
+                }
+            }, 5000);
+        }
+
+        function showResult(videoUrl) {
+            spinner.style.display = 'none';
+            resultSection.style.display = 'block';
+            document.getElementById('videoLink').href = videoUrl;
+            document.getElementById('generateButton').disabled = false;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
