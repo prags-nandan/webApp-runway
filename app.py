@@ -12,7 +12,7 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-#Ensuring the uploads directory exists
+#Ensuring the uploads directory exists, need to create Vars in AppRunner
 app = Flask(__name__)
 CORS(app)
 
