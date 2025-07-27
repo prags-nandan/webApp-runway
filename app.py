@@ -15,12 +15,16 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
- 
-
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = 'uploads'
+
+# Use /tmp for App Runner (it's the only writable directory)
+if os.environ.get('AWS_EXECUTION_ENV'):  # Running on AWS
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+else:  # Local development
+    app.config['UPLOAD_FOLDER'] = 'uploads'
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Create upload folder if it doesn't exist
@@ -58,6 +62,11 @@ def index():
     """Render the main page"""
     return render_template('index.html')
 
+@app.route('/health')
+def health():
+    """Health check endpoint for App Runner"""
+    return jsonify({'status': 'healthy', 'service': 'tvnz-video-generator'}), 200
+
 @app.route('/api/upload-and-generate', methods=['POST'])
 def upload_and_generate():
     """Handle image upload and initiate video generation"""
@@ -78,10 +87,23 @@ def upload_and_generate():
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"{timestamp}_{filename}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Ensure directory exists (important for /tmp)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            
             file.save(filepath)
             
             # Convert to base64 data URL
             image_data_url = convert_image_to_base64_data_url(filepath)
+            
+            # Check if API token is configured
+            if not BEARER_TOKEN:
+                # Clean up uploaded file
+                os.remove(filepath)
+                return jsonify({
+                    'error': 'Runway API token not configured',
+                    'message': 'Please set RUNWAY_API_TOKEN environment variable'
+                }), 500
             
             # Prepare API request
             headers = {
@@ -106,7 +128,10 @@ def upload_and_generate():
             )
             
             # Clean up uploaded file
-            os.remove(filepath)
+            try:
+                os.remove(filepath)
+            except:
+                pass  # Don't fail if file cleanup fails
             
             if response.status_code == 200:
                 return jsonify(response.json())
@@ -120,12 +145,20 @@ def upload_and_generate():
             return jsonify({'error': 'Invalid file type'}), 400
             
     except Exception as e:
+        app.logger.error(f"Error in upload_and_generate: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/check-status/<task_id>')
 def check_status(task_id):
     """Check the status of a video generation task"""
     try:
+        # Check if API token is configured
+        if not BEARER_TOKEN:
+            return jsonify({
+                'error': 'Runway API token not configured',
+                'message': 'Please set RUNWAY_API_TOKEN environment variable'
+            }), 500
+            
         headers = {
             'Authorization': f'Bearer {BEARER_TOKEN}',
             'X-Runway-Version': '2024-11-06'
@@ -145,8 +178,9 @@ def check_status(task_id):
             }), response.status_code
             
     except Exception as e:
+        app.logger.error(f"Error in check_status: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)
